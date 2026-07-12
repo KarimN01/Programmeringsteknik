@@ -53,36 +53,9 @@ def canonical_word(word):
     return word
 
 
-def resolve_path(filename):
-    try:
-        with open(filename, 'r', encoding='utf-8'):
-            return filename
-    except FileNotFoundError:
-        pass
-
-    if '\\' in filename or '/' in filename:
-        raise FileNotFoundError(filename)
-
-    script_directory = ''
-    if '__file__' in globals():
-        script_path = __file__
-        last_backslash = script_path.rfind('\\')
-        last_slash = script_path.rfind('/')
-        last_separator = last_backslash
-        if last_slash > last_separator:
-            last_separator = last_slash
-        if last_separator != -1:
-            script_directory = script_path[:last_separator + 1]
-
-    candidate = script_directory + filename
-    with open(candidate, 'r', encoding='utf-8'):
-        return candidate
-
-
 def number_lines(f):
-    resolved_input = resolve_path(f)
-    input_file = open(resolved_input, 'r', encoding='utf-8')
-    directory, base_name = split_path(resolved_input)
+    input_file = open(f, 'r', encoding='utf-8')
+    directory, base_name = split_path(f)
     output_file = open(directory + 'numbered_' + base_name, 'w', encoding='utf-8')
 
     line_number = 0
@@ -95,8 +68,7 @@ def number_lines(f):
 
 
 def index_text(filename):
-    resolved_input = resolve_path(filename)
-    input_file = open(resolved_input, 'r', encoding='utf-8')
+    input_file = open(filename, 'r', encoding='utf-8')
     index = {}
 
     for line_number, line in enumerate(input_file):
