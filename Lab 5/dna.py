@@ -59,6 +59,10 @@ def check_exact_overlap(left, right, min_overlap=10):
 
 
 def overlaps(data, overlap_fn):
+    """Return a dict-of-dicts mapping accession pairs to overlap lengths.
+
+    Only include entries where an overlap is found (omit empty rows).
+    """
     res = {}
     for left in data:
         row = {}
