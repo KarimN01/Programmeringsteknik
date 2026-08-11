@@ -11,7 +11,7 @@ class DnaSeq:
         return len(self.seq)
 
     def __str__(self):
-        return f"<DnaSeq accession='{self.accession}'>"
+        return f"<DnaSeq accession={self.accession}>"
 
 
 def read_dna(filename):
@@ -86,8 +86,8 @@ def test_class_DnaSeq():
     assert len(s1) == 4, 'Your length method (__len__) is not correct.'
     assert len(s2) == 70, 'Your length method (__len__) is not correct.'
 
-    assert str(s1) == "<DnaSeq accession='s1'>", 'The __str__ method is not following the specification.'
-    assert str(s2) == "<DnaSeq accession='s2'>", 'The __str__ method is not following the specification.'
+    assert str(s1) == '<DnaSeq accession=s1>', 'The __str__ method is not following the specification.'
+    assert str(s2) == '<DnaSeq accession=s2>', 'The __str__ method is not following the specification.'
 
     # The rest of this function is verifying that we are indeed raising an exception.
     status = 0
