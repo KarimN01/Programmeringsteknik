@@ -1,0 +1,323 @@
+INDU: Fjärilars utbredning i Sverige
+
+Lars Arvestad
+
+17 juli 2023
+
+Innehåll
+
+Introduktion
+
+Uppgift (E-C)
+Krav .
+.
+.
+.
+Rapporten .
+
+.
+
+Data
+
+Betygssättning
+
+.
+.
+
+.
+.
+
+.
+.
+
+.
+.
+
+.
+.
+
+.
+.
+
+.
+.
+
+.
+.
+
+.
+.
+
+.
+.
+
+.
+.
+
+.
+.
+
+.
+.
+
+.
+.
+
+.
+.
+
+.
+.
+
+.
+.
+
+.
+.
+
+.
+.
+
+.
+.
+
+.
+.
+
+.
+.
+
+.
+.
+
+.
+.
+
+.
+.
+
+.
+.
+
+.
+.
+
+.
+.
+
+.
+.
+
+.
+.
+
+.
+.
+
+.
+.
+
+.
+.
+
+.
+.
+
+.
+.
+
+.
+.
+
+.
+.
+
+.
+.
+
+.
+.
+
+.
+.
+
+.
+.
+
+.
+.
+
+.
+.
+
+.
+.
+
+.
+.
+
+.
+.
+
+.
+.
+
+.
+.
+
+.
+.
+
+.
+.
+
+1
+
+1
+2
+2
+
+2
+
+3
+
+Introduktion
+
+Arters utbredning förändras över tid och i det här projektet ska du skriva ett program för att studera data från
+Artportalen som drivs av SLU och presenterar data från SLU:s Artdatabank. Artdatabanken samlar observationer
+från såväl forskare som naturintresserade privatpersoner och täcker alla tänkbara arter. Du får observationer för
+några fjärilsarter, samlade över 20 år, och ditt program ska generera diagram som illustrerar några frågor om
+fjärilarnas liv och utbredning.
+
+Ta till exempel Sälgskimmerfjärilen som finns i stora delar av Europa, men har tills nyligen bara synts ibland
+i de allra södraste delarna av Sverige. På senare år har den börjat spridas norrut. När började den röra sig norrut?
+Hur långt norrut tar den sig? När på året syns den?
+
+Ditt program ska läsa in observationsdata för vilken art som helst, exporterad från Artportalen och sparad
+
+som CSV-filer, och skapa diagram för arten.
+
+Gör man det här projektet kan man få betyg E-C. För generella krav på projektet samt betygskriterier se de
+
+generella instruktionerna i INDU—Individuell Uppgift i Programmering.
+
+Uppgift (E-C)
+
+Du ska skriva ett Python-program som läser observationsdata från Artportalen (se sektion “Data” nedan) och
+analyserar hur utbredningen har förändrats över tid. Programmet ska framförallt skapa figurer med hjälp av
+matplotlib, som ska göra det möjligt att, för varje art man studerar, besvara följande frågor:
+
+• Hur har artens utbredning ändrats över åren? Visa i en figur hur den nordligaste observationen har
+förändrats med åren. D.v.s., gör en figur med årtal på x-axeln och nordligaste latitud för det årtalet på
+y-axeln. Dra linjer för Ystad och Abisko i figuren för att tydligt illustrera latituderna.
+
+• Hur har antalet observationer förändrats över tid? Visa i en figur hur många observationer som gjorts
+
+per år i Sverige.
+
+• Vilken tid på året är arten aktiv? Använd observationerna för att bedöma under vilken tid man kan
+hitta fjärilarna i naturen. Programmet ska skapa ett stapeldiagram som visar andelen observationer per
+vecka (av årets observationer), med veckonummer på x-axeln, för 2022.
+
+Programmet ska också räkna fram och presentera i vilken period (givet som ”från vecka x till vecka y”)
+som 90 % av observationerna görs. Den beräkningen görs genom att se vid vilket veckonummer som de
+
+1
+
+(a)
+
+(b)
+
+(c)
+
+Figur 1: Exempel på genererade figurer för Grönsnabbvinge. (a) Diagrammet visar hur de nordligaste observa-
+tionerna har ändrats över tid. (b) Antalet observationer som gjorts per år. (c) Andelen observationer per vecka,
+med de veckor då 90 % av observationerna görs markerade i blått.
+
+första 5 % respektive 95 % av observationerna har gjorts. Du kan välja mellan att markera med färg i
+diagrammet vilka veckor som arten är aktiv (se figur 1) eller presentera det i text (utskriven i konsolen
+eller diagrammet).
+
+Med hjälp av ditt program och de datafiler du kan hämta till din dator ska det vara möjligt att svara på
+
+följande biologiska frågeställningar:
+
+• Vilka arter verkar ha flyttat norrut?
+• Är antalet observationer ungefär konstanta över åren?
+• Finns det några mönster på tiderna då fjärilarna är aktiva? Finns det skillnader mellan arterna?
+
+Eftersom det här är en programmeringskurs så behöver du inte svara på dessa tre frågor, men se dem som en
+guide till målet med programmeringen.
+
+Krav
+
+• Programmet ska vara generellt och kunna användas på nya datafiler från Artportalen (behandlade på
+
+samma sätt som de du får).
+
+• Du ska inte använda modulen Pandas.
+• Om det uppstår problem vid inläsning ska ett felmeddelande skrivas ut, men beräkningarna ska fortsätta.
+• Du får inte kasta bort data som är svårtolkade (tex med semikolon i fältet Lokalnamn), så använd modulen
+
+csv för inläsning av data.
+
+• Axlarna ska vara beskrivna (till exempel “År” och “Antal”) i dina figurer.
+• Ditt program ska besvara alla frågor på ett klart och tydligt sätt.
+• Ditt program ska spara figurerna i PDF-format med beskrivande filnamn.
+• Figurerna som skrivs ut ska likna de som visas i figur 1.
+
+Rapporten
+
+Som beskrivs i de generella instruktionerna ska rapporten fokusera på programmets uppbyggnad och rapporten
+ska vara max tre A4-sidor. I den här uppgiften kan du dock lägga med ett appendix som innehåller exempelfigurer
+med eventuella förklaringar och svar på frågorna i uppgiften.
+
+Data
+
+Du får data via denna länk: Fjärilsdata (via SU:s Box-tjänst). Datafilerna är i princip tagna direkt1 från Art-
+portalen, men några kolumner har tagits bort av integritetsskäl (tex namn på observatör) och för att förenkla
+datafilerna. Filerna har ändå mer data än du behöver och ett antal kolumner ska ignoreras. Formatet är ”CSV
+UTF-8”, exporterat från Excel, och det betyder att kolumnerna är separerade av semikolon. Dessa data bör läsas
+med hjälp av modulen csv, eftersom det finns vissa fält som innehåller semikolon. Till exempel är att ”Lokalnam-
+net” (platsen) för observation 13101005 i amiral.csv angiven som ”Skottsundslätten; Njurunda”. Om man delar
+
+1Artportalen begränsar antalet observationer som kan exporteras till 10 000, så några filer har satts ihop från flera utsökningar.
+
+2
+
+20022004200620082010201220142016201820202022Year6.26.46.66.87.07.27.47.6Latitude (RF 90)1e6AbiskoYstadGrönsnabbvinge: northernmost observation20022004200620082010201220142016201820202022Year100020003000400050006000700080009000# observationsGrönsnabbvinge: observations per year01020304050Week number0.0000.0250.0500.0750.1000.1250.1500.175observationsGrönsnabbvinge: weekly observations 2022upp rader på semikolon kommer man alltså av misstag dela raden en extra gång och det gör att tolkningen av
+raden blir fel. Modulen csv tar hänsyn till att vissa fält kan innehålla semikolon och använder att dessa fält är
+”skyddade” med citattecken.
+
+Första raden har kolumnrubriker. Därefter följer observationsdata, med en observation per rad. De kolumner
+
+som du har användning av är:
+
+• Artnamn
+• Antal
+• Nord
+• Slutdatum
+
+Antal är förstås antalet observerade individer vid en observation. Vissa observationer har en anteckning (”note-
+rad”) istället för ett tal. Förslagsvis översätter man det till 1.
+
+Nord och Ost ger dig koordinaterna i koordinatsystemet RT 90, som anger positioner som meter från en
+
+meridian ca 15◦ öster om Greenwich samt ekvatorn.
+
+Koordinaterna Ost 1662355 och Nord 6573555 betyder ungefär ”1662 km öster om medelmeridianen och 6573
+km norr”. Medelmeridianen är en sorts mittlinje i Sverige och den ligger cirka 15 grader öster om Greenwich. I
+koordinatsystemet RT 90 är de nordliga koordinaterna ungefär 7585000 för Abisko och 6164000 för Ystad.
+
+Observationer har start- och slutdatum eftersom de ibland görs som insamlingar över tid. För fjärilsobser-
+vationerna duger det bra att använda endast Slutdatum. Man kan notera att vissa Startdatum är konstigt tidiga.
+Datum ges på formen 2023-06-01 (ISO-standard, ”första juni 2023”). Det kan vara praktiskt att använda Python-
+modulen datetime för att läsa och arbeta med datum.
+
+Betygssättning
+
+Detaljer finns i de generella instruktionerna i INDU—Individuell Uppgift i Programmering.
+
+3
+
+
