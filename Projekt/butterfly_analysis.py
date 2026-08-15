@@ -1,224 +1,246 @@
 #!/usr/bin/env python3
-"""Generate E-level analysis for Artportalen butterfly CSV exports.
+"""Huvudprogram för analys av fjärilars utbredning i Sverige.
 
-Usage: python butterfly_analysis.py --csv PATH [--species NAME]
+Programmet läser observationsdata exporterad från Artportalen och
+skapar tre diagram per art:
 
-Produces three PDF figures (saved in the current directory):
-- {species}_northernmost_per_year.pdf
-- {species}_observations_per_year.pdf
-- {species}_weekly_2022.pdf
+* nordligaste observationen per år,
+* antalet observationer per år,
+* andelen observationer per vecka för ett valt år (2022 som standard),
+  med den period då 90 % av observationerna görs markerad.
 
-The script uses only the Python stdlib plus matplotlib and numpy.
+Körs så här::
+
+    python butterfly_analysis.py --csv butterfly_data/amiral.csv
+    python butterfly_analysis.py --csv butterfly_data --all --outdir plots
+
+Klassen ``ButterflyApplication`` sköter dialogen med användaren:
+utskrifter, felmeddelanden och val av filer. Själva beräkningarna
+ligger i ``analysis`` och diagrammen i ``plotting``.
 """
 from __future__ import annotations
+
 import argparse
-import csv
-from collections import defaultdict, Counter
-from datetime import datetime
-from pathlib import Path
-import math
 import sys
+from pathlib import Path
 
-import numpy as np
-import matplotlib.pyplot as plt
+from analysis import SpeciesAnalysis
+from observations import ObservationError, ObservationReader
+from plotting import FigureWriter
 
+# Uppgiften efterfrågar veckodiagrammet för 2022. Året går att ändra
+# med flaggan --year för att kunna titta på andra år i samma data.
+DEFAULT_WEEK_YEAR = 2022
 
-def parse_args():
-    p = argparse.ArgumentParser(description='Butterfly distribution plots (E-level)')
-    p.add_argument('--csv', required=True, help='Path to semicolon-separated CSV from Artportalen, or a directory containing CSVs')
-    p.add_argument('--species', required=False, help='Species name to analyse (Artnamn). If omitted, the most common species is used')
-    p.add_argument('--outdir', required=False, help='Directory to write PDF plots to (default: current directory)')
-    p.add_argument('--all', dest='all_files', action='store_true', help='If set and --csv is a directory, process all CSV files inside')
-    return p.parse_args()
-
-
-def normalize_header(h: str) -> str:
-    return h.strip().lower()
+# Hur många inläsningsproblem som skrivs ut per fil. Datafilerna har
+# tiotusentals rader, och en fil med systematiska fel skulle annars
+# fylla hela terminalen; resten sammanfattas med en räknare.
+MAX_REPORTED_ISSUES = 10
 
 
-def read_records(csv_path: Path):
-    records = []
-    with csv_path.open(encoding='utf-8', newline='') as fh:
-        # Artportalen CSV uses semicolon separation
-        reader = csv.DictReader(fh, delimiter=';')
-        # normalize keys
-        fieldmap = {normalize_header(k): k for k in reader.fieldnames or []}
-        for i, row in enumerate(reader, start=1):
-            try:
-                # pull raw values using normalized names
-                get = lambda name: row.get(fieldmap.get(name, ''), '').strip()
-                art = get('artnamn')
-                antal = get('antal')
-                nord = get('nord')
-                slut = get('slutdatum')
-                records.append({'art': art, 'antal': antal, 'nord': nord, 'slut': slut})
-            except Exception as e:
-                print(f'Warning: failed to parse row {i}: {e}', file=sys.stderr)
-                continue
-    return records
+class ButterflyApplication:
+    """Kör analysen för en eller flera datafiler och rapporterar läget.
 
+    Klassen samlar all användarinteraktion: den skriver ut vad som
+    hittats, vilka problem som uppstått och var diagrammen sparats.
+    """
 
-def safe_int(x):
-    try:
-        return int(float(x))
-    except Exception:
-        return 1
+    def __init__(self, outdir: Path, week_year: int = DEFAULT_WEEK_YEAR,
+                 species: str | None = None, write_png: bool = False,
+                 stream=sys.stdout, error_stream=sys.stderr):
+        """Ställ in var diagram sparas och vart utskrifter går.
 
+        Strömmarna går att byta ut, vilket testerna använder för
+        att fånga utskrifterna i minnet.
+        """
+        self.outdir = Path(outdir)
+        self.week_year = week_year
+        self.species = species
+        self.write_png = write_png
+        self.stream = stream
+        self.error_stream = error_stream
+        self.reader = ObservationReader()
 
-def safe_float(x):
-    try:
-        return float(x)
-    except Exception:
-        return None
+    def _say(self, message: str) -> None:
+        """Skriv ett meddelande till användaren."""
+        print(message, file=self.stream)
 
+    def _warn(self, message: str) -> None:
+        """Skriv ett felmeddelande utan att avbryta körningen."""
+        print(message, file=self.error_stream)
 
-def parse_date(s: str):
-    if not s:
-        return None
-    for fmt in ('%Y-%m-%d', '%Y-%m-%dT%H:%M:%S'):
-        try:
-            return datetime.strptime(s.split()[0], '%Y-%m-%d').date()
-        except Exception:
-            pass
-    try:
-        # try fromisoformat
-        return datetime.fromisoformat(s).date()
-    except Exception:
-        return None
+    def run(self, csv_path: Path, process_all: bool = False) -> int:
+        """Analysera en fil eller alla CSV-filer i en katalog.
 
+        Returnerar antalet filer som kunde analyseras. En fil som inte
+        går att läsa ger ett felmeddelande, men körningen fortsätter
+        med nästa fil.
+        """
+        paths = self._collect_paths(csv_path, process_all)
+        self.outdir.mkdir(parents=True, exist_ok=True)
+        analysed = 0
+        for path in paths:
+            if self.process_file(path):
+                analysed += 1
+        return analysed
 
-def analyse(records, species, outdir: Path):
-    species_records = [r for r in records if r['art'] == species]
-    if not species_records:
-        raise SystemExit(f'No records for species: {species}')
+    def _collect_paths(self, csv_path: Path,
+                       process_all: bool) -> list[Path]:
+        """Ta fram vilka filer som ska analyseras.
 
-    # northernmost per year
-    north_by_year = defaultdict(lambda: -math.inf)
-    counts_by_year = defaultdict(int)
-    weekly_2022 = Counter()
-    total_2022 = 0
-
-    for r in species_records:
-        nord = safe_float(r['nord'])
-        antal = safe_int(r['antal'])
-        slut = parse_date(r['slut'])
-        # use Slutdatum for year/week
-        year = slut.year if slut else None
-        if nord is not None and year is not None:
-            # store north as meters (RT90); later scale for plotting
-            if nord > north_by_year[year]:
-                north_by_year[year] = nord
-        if year is not None:
-            counts_by_year[year] += 1
-        if slut and slut.year == 2022:
-            week = int(slut.isocalendar()[1])
-            weekly_2022[week] += 1
-            total_2022 += 1
-
-    # Prepare northernmost per year plot
-    years = sorted(north_by_year.keys())
-    if years:
-        north_vals = [north_by_year[y] / 1e6 for y in years]  # scale to millions as in spec
-        plt.figure()
-        plt.plot(years, north_vals, marker='o')
-        plt.xlabel('År')
-        plt.ylabel('Latitude (RT90 / 1e6)')
-        # Add horizontal lines for Ystad and Abisko (approx)
-        ystad = 6164000 / 1e6
-        abisko = 7585000 / 1e6
-        plt.axhline(ystad, color='gray', linestyle='--', label='Ystad')
-        plt.axhline(abisko, color='gray', linestyle=':', label='Abisko')
-        plt.legend()
-        plt.title(f'Northernmost observation per year — {species}')
-        out = outdir / f"{species.replace(' ', '_')}_northernmost_per_year.pdf"
-        png_out = outdir / f"{species.replace(' ', '_')}_northernmost_per_year.png"
-        plt.tight_layout()
-        plt.savefig(out)
-        plt.savefig(png_out, dpi=150)
-        plt.close()
-        print(f'Wrote {out}')
-
-    # observations per year
-    years2 = sorted(counts_by_year.keys())
-    if years2:
-        counts = [counts_by_year[y] for y in years2]
-        plt.figure()
-        plt.bar(years2, counts)
-        plt.xlabel('År')
-        plt.ylabel('Antal')
-        plt.title(f'Observations per year — {species}')
-        out = outdir / f"{species.replace(' ', '_')}_observations_per_year.pdf"
-        png_out = outdir / f"{species.replace(' ', '_')}_observations_per_year.png"
-        plt.tight_layout()
-        plt.savefig(out)
-        plt.savefig(png_out, dpi=150)
-        plt.close()
-        print(f'Wrote {out}')
-
-    # weekly distribution for 2022
-    weeks = list(range(1, 54))
-    freqs = [weekly_2022[w] / total_2022 if total_2022 > 0 else 0 for w in weeks]
-    plt.figure(figsize=(10, 4))
-    bars = plt.bar(weeks, freqs)
-    plt.xlabel('Week number')
-    plt.ylabel('Proportion of 2022 observations')
-    plt.title(f'Weekly observations 2022 — {species}')
-
-    # compute 5% and 95% percentiles over cumulative distribution
-    if total_2022 > 0:
-        cum = np.cumsum(freqs)
-        lower_week = next((w for w, c in zip(weeks, cum) if c >= 0.05), 1)
-        upper_week = next((w for w, c in zip(weeks, cum) if c >= 0.95), weeks[-1])
-        for w in weeks:
-            if lower_week <= w <= upper_week:
-                bars[w - 1].set_color('C0')
-            else:
-                bars[w - 1].set_color('lightgray')
-        plt.annotate(f'90% period: week {lower_week}–{upper_week}', xy=(0.99, 0.95), xycoords='axes fraction', ha='right')
-
-    out = outdir / f"{species.replace(' ', '_')}_weekly_2022.pdf"
-    png_out = outdir / f"{species.replace(' ', '_')}_weekly_2022.png"
-    plt.tight_layout()
-    plt.savefig(out)
-    plt.savefig(png_out, dpi=150)
-    plt.close()
-    print(f'Wrote {out}')
-
-
-def main():
-    args = parse_args()
-    csv_path = Path(args.csv)
-    outdir = Path(args.outdir) if args.outdir else Path.cwd()
-    outdir.mkdir(parents=True, exist_ok=True)
-
-    def process_file(path: Path):
-        records = read_records(path)
-        if not records:
-            print(f'No records read from {path}; skipping')
-            return
-        species = args.species
-        if not species:
-            c = Counter(r['art'] for r in records if r['art'])
-            if not c:
-                print(f'No species names found in {path}; skipping')
-                return
-            species_local = c.most_common(1)[0][0]
-            print(f'File {path.name}: no species given — using most common: {species_local}')
-            species = species_local
-        # create subfolder per input file to avoid name clashes
-        file_outdir = outdir
-        analyse(records, species, file_outdir)
-
-    if csv_path.is_dir():
-        if not args.all_files:
-            raise SystemExit(f'{csv_path} is a directory — use --all to process all CSVs inside')
-        for f in sorted(csv_path.glob('*.csv')):
-            process_file(f)
-    else:
+        Lyfter ``ObservationError`` om sökvägen inte går att använda,
+        eftersom det är ett fel i anropet snarare än i en enskild fil.
+        """
+        if csv_path.is_dir():
+            if not process_all:
+                raise ObservationError(
+                    f'{csv_path} är en katalog – använd --all för att '
+                    'analysera alla CSV-filer i den')
+            paths = sorted(csv_path.glob('*.csv'))
+            if not paths:
+                raise ObservationError(f'{csv_path} innehåller inga CSV-filer')
+            return paths
         if not csv_path.exists():
-            raise SystemExit(f'CSV file not found: {csv_path}')
-        process_file(csv_path)
+            raise ObservationError(f'hittar inte filen {csv_path}')
+        return [csv_path]
+
+    def process_file(self, path: Path) -> bool:
+        """Läs en fil och skapa diagrammen för den valda arten.
+
+        Returnerar ``True`` om diagram kunde skapas. Fel i en fil
+        rapporteras men avbryter inte programmet, eftersom
+        beräkningarna ska fortsätta med övriga filer.
+        """
+        self._say(f'\n=== {path.name} ===')
+        try:
+            observations, issues = self.reader.read(path)
+        except ObservationError as err:
+            self._warn(f'Fel: {err}')
+            return False
+
+        self._report_issues(issues)
+        if not observations:
+            self._warn(f'Fel: {path.name} innehåller inga läsbara '
+                       'observationer')
+            return False
+
+        species = self._choose_species(observations, path)
+        if species is None:
+            return False
+
+        analysis = SpeciesAnalysis(species, observations)
+        if len(analysis) == 0:
+            self._warn(f'Fel: {path.name} innehåller inga observationer '
+                       f'av {species}')
+            return False
+        self._present(analysis)
+        return True
+
+    def _report_issues(self, issues: list) -> None:
+        """Skriv ut de problem som upptäcktes vid inläsningen."""
+        if not issues:
+            return
+        rows = 'rad' if len(issues) == 1 else 'rader'
+        self._warn(f'{len(issues)} {rows} gav problem vid inläsningen:')
+        for issue in issues[:MAX_REPORTED_ISSUES]:
+            self._warn(f'  {issue}')
+        remaining = len(issues) - MAX_REPORTED_ISSUES
+        if remaining > 0:
+            self._warn(f'  ... och {remaining} till')
+
+    def _choose_species(self, observations: list,
+                        path: Path) -> str | None:
+        """Bestäm vilken art som ska analyseras i en fil.
+
+        Är ingen art vald på kommandoraden används den vanligaste arten
+        i filen, vilket gör att programmet kan köras på nya filer utan
+        att man vet vad de innehåller.
+        """
+        if self.species:
+            return self.species
+        names = SpeciesAnalysis.available_species(observations)
+        if not names:
+            self._warn(f'Fel: {path.name} saknar artnamn')
+            return None
+        if len(names) > 1:
+            self._say(f'Filen innehåller flera arter: {", ".join(names)}')
+        self._say(f'Analyserar den vanligaste arten: {names[0]}')
+        return names[0]
+
+    def _present(self, analysis: SpeciesAnalysis) -> None:
+        """Skriv ut sammanfattningen och spara diagrammen för en art."""
+        northernmost = analysis.northernmost_per_year()
+        per_year = analysis.observations_per_year()
+        individuals = analysis.individuals_per_year()
+        proportions = analysis.weekly_proportions(self.week_year)
+        period = analysis.active_period(self.week_year)
+
+        self._say(f'{analysis.species}: {len(analysis)} observationer '
+                  f'({sum(individuals.values())} individer) '
+                  f'{min(per_year)}–{max(per_year)}')
+        if period is None:
+            self._warn(f'Varning: inga observationer {self.week_year}, '
+                       'veckodiagrammet blir tomt')
+        else:
+            self._say(f'90 % av observationerna {self.week_year} görs '
+                      f'från vecka {period[0]} till vecka {period[1]}')
+
+        writer = FigureWriter(self.outdir, analysis.species, self.write_png)
+        written = []
+        if northernmost:
+            written += writer.plot_northernmost(northernmost)
+        else:
+            self._warn('Varning: inga användbara nordkoordinater, '
+                       'utbredningsdiagrammet hoppas över')
+        if per_year:
+            written += writer.plot_observations_per_year(per_year)
+        written += writer.plot_weekly(proportions, self.week_year, period)
+        for path in written:
+            self._say(f'Skrev {path}')
+
+
+def parse_args(argv=None):
+    """Tolka kommandoradsargumenten."""
+    parser = argparse.ArgumentParser(
+        description='Analyserar fjärilars utbredning utifrån data '
+                    'från Artportalen')
+    parser.add_argument(
+        '--csv', required=True,
+        help='CSV-fil från Artportalen, eller en katalog med CSV-filer')
+    parser.add_argument(
+        '--species',
+        help='Art att analysera (Artnamn). Utan denna flagga används '
+             'den vanligaste arten i varje fil')
+    parser.add_argument(
+        '--outdir', default='.',
+        help='Katalog att spara diagrammen i (standard: aktuell katalog)')
+    parser.add_argument(
+        '--all', dest='process_all', action='store_true',
+        help='Analysera alla CSV-filer när --csv är en katalog')
+    parser.add_argument(
+        '--year', type=int, default=DEFAULT_WEEK_YEAR,
+        help=f'År för veckodiagrammet (standard: {DEFAULT_WEEK_YEAR})')
+    parser.add_argument(
+        '--png', action='store_true',
+        help='Spara diagrammen som PNG vid sidan av PDF-filerna')
+    return parser.parse_args(argv)
+
+
+def main(argv=None) -> int:
+    """Startpunkt för programmet; returnerar en statuskod till skalet."""
+    args = parse_args(argv)
+    app = ButterflyApplication(Path(args.outdir), args.year, args.species,
+                               args.png)
+    try:
+        analysed = app.run(Path(args.csv), args.process_all)
+    except ObservationError as err:
+        print(f'Fel: {err}', file=sys.stderr)
+        return 1
+    if analysed == 0:
+        print('Inga filer kunde analyseras', file=sys.stderr)
+        return 1
+    return 0
 
 
 if __name__ == '__main__':
-    main()
+    sys.exit(main())

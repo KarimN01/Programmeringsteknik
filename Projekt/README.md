@@ -1,19 +1,62 @@
-# Fjärilsutbredning — E-level analysis
+# Fjärilars utbredning i Sverige
 
-This small tool produces the three required figures for the course project:
+Program som läser observationsdata exporterad från Artportalen
+(semikolonseparerade CSV-filer) och skapar tre diagram per art:
 
-- Northernmost observation per year
-- Number of observations per year
-- Weekly observation distribution for 2022 (90% activity period highlighted)
+- nordligaste observationen per år, med linjer för Ystad och Abisko
+- antalet observationer per år
+- andelen observationer per vecka för ett valt år (2022 som standard),
+  med den period då 90 % av observationerna görs markerad
 
-Usage (example):
+Diagrammen sparas som PDF (och som PNG med flaggan `--png`).
+
+## Kör programmet
 
 ```bash
-python butterfly_analysis.py --csv path/to/fjarilsdata.csv --species "Grönsnabbvinge"
+# en art
+python butterfly_analysis.py --csv butterfly_data/amiral.csv --outdir plots
+
+# alla filer i en katalog
+python butterfly_analysis.py --csv butterfly_data --all --outdir plots
 ```
 
-If `--species` is omitted the script will pick the most common species found in the CSV.
+Flaggor:
 
-The CSV must be exported from Artportalen (UTF-8 CSV with semicolon delimiter). The script uses only the `csv` module to read data (no pandas).
+| Flagga | Betydelse |
+| --- | --- |
+| `--csv` | CSV-fil eller katalog med CSV-filer (obligatorisk) |
+| `--all` | analysera alla CSV-filer när `--csv` är en katalog |
+| `--species` | art att analysera; utan flaggan används vanligaste arten |
+| `--outdir` | katalog för diagrammen (standard: aktuell katalog) |
+| `--year` | år för veckodiagrammet (standard: 2022) |
+| `--png` | spara även PNG-versioner av diagrammen |
 
-Dependencies: see `requirements.txt`.
+## Kör testerna
+
+```bash
+python -m unittest -v test_butterfly_analysis
+```
+
+## Filer
+
+| Fil | Innehåll |
+| --- | --- |
+| `butterfly_analysis.py` | huvudprogram, klassen `ButterflyApplication` |
+| `observations.py` | `Observation` och `ObservationReader` (inläsning) |
+| `analysis.py` | `SpeciesAnalysis` (alla beräkningar) |
+| `plotting.py` | `FigureWriter` (diagrammen) |
+| `test_butterfly_analysis.py` | enhetstester |
+| `butterfly_data/` | datafiler från Artportalen |
+| `plots/` | genererade diagram |
+| `report.pdf` | rapporten |
+
+## Beroenden
+
+Endast `matplotlib` utöver Pythons standardbibliotek (Pandas används
+inte). Installeras med:
+
+```bash
+python -m pip install -r requirements.txt
+```
+
+Kräver Python 3.9 eller senare.
