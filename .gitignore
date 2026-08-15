@@ -1,0 +1,3 @@
+# Python-bytekod som skapas när program och tester körs
+__pycache__/
+*.py[cod]
