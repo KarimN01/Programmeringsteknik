@@ -193,8 +193,8 @@ def write_page_one(pdf: PdfPages) -> None:
 
     page.heading('Hjälpmedel')
     page.write(
-        'Jag har använt ett AI-verktyg som stöd i arbetet, framför '
-        'allt för enhetstesterna i test_butterfly_analysis.py och för '
+        'Jag har använt ett AI-verktyg som stöd i arbetet, för '
+        'enhetstesterna i test_butterfly_analysis.py och för '
         'uppdelningen i klasser. Jag har gått igenom koden och '
         'testerna och kontrollerat att de gör rätt saker.')
     page.close()
