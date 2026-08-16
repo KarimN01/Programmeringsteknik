@@ -128,159 +128,146 @@ def species_summary() -> list[tuple[str, str, str, str]]:
 def write_page_one(pdf: PdfPages) -> None:
     """Sida 1: de fyra obligatoriska punkterna."""
     page = ReportPage(pdf)
-    page.write('INDU: Fjärilars utbredning i Sverige', size=15,
-               weight='bold')
-    page.write('Rapport för individuell uppgift i programmering '
+    page.write('Fjärilars utbredning i Sverige', size=15, weight='bold')
+    page.write('Rapport, individuell uppgift i programmering '
                '(DA2004/DA2005)', size=9)
 
-    page.heading('1. Vilken uppgift jag har implementerat')
+    page.heading('1. Uppgiften')
     page.write(
-        'Projektet "Fjärilars utbredning i Sverige" (nivå E–C). Programmet '
-        'läser observationsdata som exporterats från Artportalen som '
-        'semikolonseparerade CSV-filer och skapar tre diagram per art: '
-        'nordligaste observationen per år med referenslinjer för Ystad och '
-        'Abisko, antalet observationer per år, samt andelen observationer '
-        'per vecka för ett valt år (2022 som standard). I veckodiagrammet '
-        'markeras den period då 90 % av årets observationer görs, och '
-        'samma period skrivs också ut i konsolen. Diagrammen sparas som '
-        'PDF med filnamn som innehåller art och diagramtyp.')
+        'Jag har gjort projektet "Fjärilars utbredning i Sverige" '
+        '(nivå E–C). Programmet läser CSV-filer från Artportalen och gör '
+        'tre diagram per art: nordligaste observationen per år (med '
+        'linjer för Ystad och Abisko), antal observationer per år, och '
+        'andel observationer per vecka för ett valt år, som standard '
+        '2022. I veckodiagrammet färgas de veckor då 90 % av '
+        'observationerna görs, och perioden skrivs också ut i terminalen. '
+        'Diagrammen sparas som PDF.')
 
-    page.heading('2. Hur programmet startas och används')
-    page.write('Programmet startas från projektkatalogen och styrs med '
-               'flaggor på kommandoraden:')
+    page.heading('2. Så kör man programmet')
+    page.write('Kör från projektkatalogen:')
     page.bullets([
-        'En art: python butterfly_analysis.py --csv butterfly_data/'
+        'En fil: python butterfly_analysis.py --csv butterfly_data/'
         'amiral.csv --outdir plots',
-        'Alla filer i en katalog: python butterfly_analysis.py --csv '
+        'En hel katalog: python butterfly_analysis.py --csv '
         'butterfly_data --all --outdir plots',
-        '--species "Amiral" väljer art i en fil som innehåller flera; '
-        'utan flaggan analyseras den vanligaste arten i varje fil.',
-        '--year 2021 byter år för veckodiagrammet (standard 2022).',
-        '--png sparar diagrammen som PNG vid sidan av PDF-filerna.',
-        'Enhetstesterna körs med: python -m unittest -v '
-        'test_butterfly_analysis',
+        'Testerna: python -m unittest -v test_butterfly_analysis',
     ])
     page.write(
-        'Programmet skriver ut en sammanfattning per fil, samt vilka rader '
-        'som inte kunde tolkas. En trasig fil avbryter inte körningen: '
-        'övriga filer analyseras ändå.')
+        'Övriga flaggor: --species "Amiral" väljer art (annars tas den '
+        'vanligaste i filen), --year 2021 byter år för veckodiagrammet '
+        'och --png sparar även PNG-filer. Programmet skriver ut en '
+        'sammanfattning per fil och vilka rader som inte gick att tolka. '
+        'En trasig fil stoppar inte körningen – resten analyseras ändå.')
 
-    page.heading('3. Bibliotek och installation')
+    page.heading('3. Bibliotek')
     page.write(
-        'Utöver Pythons standardbibliotek (csv, datetime, argparse, '
-        'collections, pathlib och unittest) används endast '
-        'matplotlib. Pandas används inte. Installation:')
+        'Bara matplotlib utöver standardbiblioteket (csv, datetime, '
+        'argparse, collections, pathlib, unittest). Ingen Pandas. '
+        'Installera med:')
     page.write('    python -m pip install -r requirements.txt', size=8.5,
                indent=0.02)
-    page.write(
-        'Programmet är skrivet för Python 3.9 eller senare (det använder '
-        'date.fromisocalendar och typannoteringar via '
-        'from __future__ import annotations).')
+    page.write('Kräver Python 3.9 eller senare.')
 
-    page.heading('4. Så är programmet strukturerat')
+    page.heading('4. Programmets uppbyggnad')
     page.write(
-        'Koden är uppdelad i tre moduler efter ansvar, plus ett '
-        'huvudprogram och en testfil. Uppdelningen gör att beräkningarna '
-        'kan testas utan att några filer eller diagram skapas:')
+        'Koden ligger i tre moduler plus huvudprogram och tester. Tanken '
+        'är att varje fil har ett ansvar, så att beräkningarna går att '
+        'testa utan att något skrivs till disk:')
     page.bullets([
-        'observations.py – klassen Observation (en observation, med '
-        'metoder för att tolka fälten Artnamn, Antal, Nord och '
-        'Slutdatum) och klassen ObservationReader som läser en CSV-fil '
-        'till Observation-objekt. Problem returneras som ReadIssue-objekt '
-        'i stället för att skrivas ut, så att inläsningen går att testa.',
-        'analysis.py – klassen SpeciesAnalysis som gör alla beräkningar '
-        'för en art: nordligaste observation per år, observationer och '
-        'individer per år, veckofördelning och 90 %-perioden. Klassen '
-        'innehåller varken print, open eller matplotlib.',
-        'plotting.py – klassen FigureWriter som ritar och sparar de tre '
-        'diagrammen. All matplotlib-kod ligger här.',
-        'butterfly_analysis.py – huvudprogram. Klassen '
-        'ButterflyApplication sköter användarinteraktionen: väljer filer '
-        'och art, skriver ut sammanfattning och felmeddelanden och '
-        'anropar de övriga modulerna. Utanför klasserna finns bara '
-        'parse_args och main.',
-        'test_butterfly_analysis.py – 39 enhetstester (unittest).',
-        'butterfly_data/ – datafilerna, plots/ – de genererade '
-        'diagrammen.',
+        'observations.py – Observation (en observation, med metoder som '
+        'tolkar Artnamn, Antal, Nord och Slutdatum) och '
+        'ObservationReader som läser en CSV-fil. Problem returneras som '
+        'ReadIssue-objekt i stället för att skrivas ut direkt.',
+        'analysis.py – SpeciesAnalysis, som räknar ut allt för en art: '
+        'nordligaste per år, observationer och individer per år, '
+        'veckofördelning och 90 %-perioden. Ingen print, open eller '
+        'matplotlib här.',
+        'plotting.py – FigureWriter, som ritar och sparar diagrammen. '
+        'All matplotlib-kod finns här.',
+        'butterfly_analysis.py – huvudprogrammet. ButterflyApplication '
+        'väljer filer och art och sköter alla utskrifter. Utanför '
+        'klasserna finns bara parse_args och main.',
+        'test_butterfly_analysis.py – 39 enhetstester.',
+        'butterfly_data/ – datafiler, plots/ – färdiga diagram.',
     ])
+
+    page.heading('Hjälpmedel')
+    page.write(
+        'Enhetstesterna i test_butterfly_analysis.py har jag tagit fram '
+        'med hjälp av ett AI-verktyg, som föreslog vilka fall som var '
+        'värda att testa. Jag har gått igenom testerna och kontrollerat '
+        'att de testar rätt saker.')
     page.close()
 
 
 def write_page_two(pdf: PdfPages) -> None:
     """Sida 2: reflektioner kring design, felhantering och testning."""
     page = ReportPage(pdf)
-    page.write('Reflektioner kring lösningen', size=13, weight='bold')
+    page.write('Reflektioner', size=13, weight='bold')
 
     page.heading('Koddesign', size=11)
     page.write(
-        'Den bärande tanken är att skilja beräkning från '
-        'användarinteraktion. SpeciesAnalysis returnerar bara värden, '
-        'FigureWriter ritar dem och ButterflyApplication skriver ut dem. '
-        'Det gör beräkningarna testbara: ett test kan kontrollera att '
-        '90 %-perioden blir vecka 20–21 utan att någon fil skapas. Samma '
-        'princip gäller inläsningen, där ObservationReader returnerar '
-        'ReadIssue-objekt i stället för att skriva ut felen själv – '
-        'huvudprogrammet bestämmer att de tio första visas och resten '
-        'sammanfattas, vilket behövs eftersom filerna har tiotusentals '
-        'rader.')
+        'Grundtanken är att hålla isär beräkning och utskrift. '
+        'SpeciesAnalysis returnerar bara värden, FigureWriter ritar dem '
+        'och ButterflyApplication skriver ut dem. Det gör beräkningarna '
+        'lätta att testa – ett test kan kolla att 90 %-perioden blir '
+        'vecka 20–21 utan att någon fil skapas. Inläsningen fungerar '
+        'likadant: ObservationReader lämnar tillbaka problemen som '
+        'ReadIssue-objekt, och huvudprogrammet avgör att bara de tio '
+        'första visas. Det behövs, för filerna har tiotusentals rader.')
 
     page.heading('Algoritmer', size=11)
     page.write(
-        'Alla sammanställningar görs med en genomgång av '
-        'observationslistan. Nordligaste observationen per år är ett '
-        'löpande maximum per år, och antalet observationer per år en '
-        'räknare per år. 90 %-perioden räknas ut genom att gå igenom '
-        'veckorna i ordning och summera antalet observationer: den första '
-        'veckan där den kumulativa andelen når 5 % blir periodens start '
-        'och den första där den når 95 % blir dess slut. Alla stegen är '
-        'linjära i antalet observationer, och en körning över alla sex '
-        'datafilerna (drygt 130 000 rader) tar några sekunder.')
+        'Allt räknas ut med en genomgång av observationerna: nordligaste '
+        'per år är ett maximum per år, antal observationer en räknare. '
+        '90 %-perioden får jag genom att gå igenom veckorna i ordning och '
+        'summera – första veckan där andelen passerar 5 % blir start och '
+        'första veckan över 95 % blir slut. Allt är linjärt i antalet '
+        'rader, och alla sex filerna (drygt 130 000 rader) tar några '
+        'sekunder.')
 
     page.heading('Datastrukturer', size=11)
     page.write(
-        'Observationerna hålls som en lista av Observation-objekt med '
-        '__slots__, vilket sparar minne när listan innehåller tiotusentals '
-        'element. Årsvisa resultat returneras som ordböcker med året som '
-        'nyckel, eftersom åren är glesa – en art behöver inte ha '
-        'observationer varje år. Veckofördelningen är i stället en lista '
-        'med 53 platser, eftersom veckonumren är tätt packade och alltid '
-        'ligger i samma intervall; då blir både uppslagning och den '
-        'kumulativa summeringen enkel. Observationerna grupperas efter '
-        'ISO-år, så att dagarna kring nyår hamnar i den vecka de faktiskt '
-        'tillhör.')
+        'Observationerna ligger i en lista av Observation-objekt med '
+        '__slots__, vilket sparar minne när de är så många. Årsvisa '
+        'resultat blir ordböcker med året som nyckel, eftersom alla år '
+        'inte har observationer. Veckofördelningen är i stället en lista '
+        'med 53 platser – veckonumren ligger alltid i samma intervall, '
+        'så det blir enklare både att slå upp och att summera. '
+        'Grupperingen följer ISO-året, så att dagar kring nyår hamnar i '
+        'rätt vecka.')
 
     page.heading('Felhantering', size=11)
     page.write(
-        'Felen delas upp efter hur allvarliga de är. En rad utan tolkbart '
-        'artnamn eller slutdatum kan inte placeras i något diagram och '
-        'hoppas över med ett meddelande som anger radnummer och orsak. '
-        'Saknad nordkoordinat är mindre allvarligt: observationen behålls '
-        'och räknas för sitt år, men används inte i utbredningsdiagrammet. '
-        'Enligt uppgiften tolkas "noterad" i kolumnen Antal som en individ. '
-        'Fel som gäller hela filen – saknad rubrikrad, saknade kolumner '
+        'Jag delar upp felen efter hur allvarliga de är. En rad utan '
+        'artnamn eller datum går inte att placera i något diagram, så '
+        'den hoppas över med ett meddelande om radnummer och orsak. '
+        'Saknad nordkoordinat är mindre illa: raden räknas fortfarande '
+        'som en observation för sitt år, men används inte i '
+        'utbredningsdiagrammet. "noterad" i kolumnen Antal tolkas som en '
+        'individ, enligt uppgiften.')
+    page.write(
+        'Fel som gäller hela filen – ingen rubrikrad, saknade kolumner '
         'eller en fil som inte går att öppna – lyfts som ObservationError '
-        'och fångas i huvudprogrammet, som rapporterar felet och går '
-        'vidare till nästa fil. Filer som inte är UTF-8 läses om med '
-        'CP1252 innan de ges upp. Osäkra bestämningar, som Artportalen '
-        'skriver "[Amiral]", räknas till samma art i stället för att '
-        'kastas bort.')
+        'och fångas i huvudprogrammet, som rapporterar och går vidare '
+        'till nästa fil. Filer som inte är UTF-8 provas om med CP1252 '
+        'innan jag ger upp. Osäkra bestämningar, som Artportalen skriver '
+        '"[Amiral]", räknar jag till samma art i stället för att slänga.')
 
     page.heading('Testning', size=11)
     page.write(
-        'Programmet har 39 enhetstester i test_butterfly_analysis.py, '
-        'körda med unittest. De täcker tolkningen av enskilda fält '
-        '(datum, antal, koordinat, artnamn inom hakparenteser), '
-        'inläsningen av hela filer (fält med semikolon inom citattecken, '
-        'byte order mark från Excel, filer med fel teckenkodning, saknade '
-        'kolumner, trasiga rader), beräkningarna (maximum per år, '
-        'räknare per år, veckofördelning, 90 %-perioden med och utan '
-        'data) samt att programmet fortsätter med nästa fil när en fil är '
-        'trasig. Testerna använder temporära kataloger och lämnar inga '
-        'filer efter sig.')
+        'Det finns 39 enhetstester i test_butterfly_analysis.py. De '
+        'täcker tolkningen av fälten (datum, antal, koordinat, artnamn '
+        'inom hakparenteser), inläsningen av hela filer (semikolon inom '
+        'citattecken, byte order mark från Excel, fel teckenkodning, '
+        'saknade kolumner, trasiga rader), beräkningarna (maximum per '
+        'år, veckofördelning, 90 %-perioden med och utan data) och att '
+        'programmet fortsätter med nästa fil när en är trasig. Testerna '
+        'använder temporära kataloger och lämnar inga filer efter sig.')
     page.write(
-        'Kontrollräkning mot data: Grönsnabbvinge har 2 330 observationer '
-        '2022 och 90 %-perioden vecka 16–25, vilket stämmer med en '
-        'oberoende uträkning direkt ur CSV-filen.')
+        'Som extra kontroll har jag räknat efter för hand: Grönsnabbvinge '
+        'har 2 330 observationer 2022 och 90 %-perioden vecka 16–25, '
+        'vilket stämmer med en uträkning direkt ur CSV-filen.')
     page.close()
 
 
@@ -290,9 +277,8 @@ def write_page_three(pdf: PdfPages) -> None:
     page.write('Appendix: exempelfigurer och biologiska frågor', size=13,
                weight='bold')
     page.write(
-        f'Figurerna nedan är programmets utdata för {EXAMPLE_SPECIES} '
-        '(kommandot i punkt 2). Motsvarande figurer för samtliga sex '
-        'arter finns i katalogen plots/.')
+        f'Figurerna nedan är programmets utdata för {EXAMPLE_SPECIES}. '
+        'Samma figurer för alla sex arter finns i plots/.')
 
     stem = EXAMPLE_SPECIES.replace(' ', '_')
     page.images([PLOTS / f'{stem}_northernmost_per_year.png',
@@ -305,28 +291,26 @@ def write_page_three(pdf: PdfPages) -> None:
                 'perioden då 90 % av observationerna görs.')
 
     page.heading('Svar på frågorna i uppgiften', size=11)
-    page.write('Nordligaste observationen i början respektive slutet av '
-               'perioden (mil norrut i RT 90, medelvärde över tre år) och '
+    page.write('Nordligaste observationen i början och i slutet av '
+               'perioden (mil norrut i RT 90, snitt över tre år), samt '
                '90 %-perioden 2022:', size=8)
     for species, first, last, weeks in species_summary():
         page.write(f'{species}: {first} → {last} mil, vecka {weeks}',
                    size=8, indent=0.025, spacing=0.85)
     page.write(
-        'Vilka arter verkar ha flyttat norrut? Samtliga arter har sin '
-        'nordligaste observation längre norrut i slutet av perioden än i '
-        'början. Tydligast är Sälgskimmerfjärilen.')
+        'Vilka arter har flyttat norrut? Alla sex, men tydligast '
+        'Sälgskimmerfjärilen.')
     page.write(
         'Är antalet observationer konstant? Nej, det ökar kraftigt för '
-        'alla arter. Det beror troligen mer på att Artportalen fått fler '
-        'användare än på att fjärilarna blivit fler – något att ha i '
-        'åtanke även när man tolkar utbredningen.')
+        'alla arter. Troligen har Artportalen fått fler användare '
+        'snarare än att fjärilarna blivit fler – värt att tänka på även '
+        'när man tolkar utbredningen.')
     page.write(
-        'Finns det mönster i när fjärilarna är aktiva? Ja, och de skiljer '
-        'sig mellan arterna. Grönsnabbvinge är en vårfjäril med en kort '
-        'period i maj–juni, medan Amiral och Tistelfjäril, som flyger in '
-        'söderifrån, syns sent och under betydligt längre tid. Sorgmantel '
-        'har den längsta perioden eftersom den övervintrar som '
-        'fullbildad.')
+        'När är fjärilarna aktiva? Det skiljer sig mellan arterna. '
+        'Grönsnabbvinge är en vårfjäril med en kort period i maj–juni, '
+        'medan Amiral och Tistelfjäril, som flyger in söderifrån, syns '
+        'sent och under mycket längre tid. Sorgmantel har den längsta '
+        'perioden – den övervintrar som fullbildad.')
     page.close()
 
 
